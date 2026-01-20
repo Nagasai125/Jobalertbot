@@ -59,7 +59,8 @@ keywords:
     # Add your keywords here...
 
   # Optional: exclude jobs containing these terms
-  exclude: []
+  exclude:
+    - "Technician"
 
   # Location filter - only match jobs in these locations
   locations:

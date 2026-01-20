@@ -52,7 +52,9 @@ class JobDatabase:
     
     def _init_db(self):
         """Initialize the database schema."""
-        self.conn = sqlite3.connect(str(self.db_path))
+        # check_same_thread=False allows the connection to be used across threads
+        # This is needed because APScheduler runs jobs in a separate thread
+        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         
         cursor = self.conn.cursor()
