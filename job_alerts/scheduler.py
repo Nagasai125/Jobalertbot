@@ -10,6 +10,7 @@ from typing import Callable, Optional
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 logger = logging.getLogger(__name__)
 
@@ -17,25 +18,30 @@ logger = logging.getLogger(__name__)
 class JobScheduler:
     """Scheduler for periodic job monitoring tasks."""
     
-    def __init__(self, interval_minutes: int = 10):
+    def __init__(self, interval_minutes: int = 10, daily_summary_hour: int = None):
         """
         Initialize the scheduler.
         
         Args:
             interval_minutes: Minutes between job checks.
+            daily_summary_hour: Hour (UTC) to send daily summary, None to disable.
         """
         self.interval_minutes = interval_minutes
+        self.daily_summary_hour = daily_summary_hour
         self.scheduler: Optional[BlockingScheduler] = None
         self._job_func: Optional[Callable] = None
+        self._summary_func: Optional[Callable] = None
     
-    def start(self, job_func: Callable):
+    def start(self, job_func: Callable, summary_func: Callable = None):
         """
         Start the scheduler with the given job function.
         
         Args:
             job_func: Function to call on each interval.
+            summary_func: Function to call for daily summary.
         """
         self._job_func = job_func
+        self._summary_func = summary_func
         self.scheduler = BlockingScheduler()
         
         # Add the job with interval trigger
@@ -47,6 +53,17 @@ class JobScheduler:
             replace_existing=True,
             max_instances=1  # Prevent overlapping runs
         )
+        
+        # Add daily summary job if configured
+        if self.daily_summary_hour is not None and summary_func:
+            self.scheduler.add_job(
+                summary_func,
+                trigger=CronTrigger(hour=self.daily_summary_hour, minute=0),
+                id='daily_summary',
+                name='Daily Summary',
+                replace_existing=True
+            )
+            logger.info(f"Daily summary scheduled at {self.daily_summary_hour}:00 UTC")
         
         # Set up graceful shutdown
         signal.signal(signal.SIGINT, self._shutdown)

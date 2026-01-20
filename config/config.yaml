@@ -1,7 +1,12 @@
 # Job Alerts Configuration
 
 polling:
-  interval_minutes: 10
+  interval_minutes: 5
+
+# Daily summary sent at this hour (24h format, UTC)
+daily_summary:
+  enabled: true
+  hour: 20  # 8 PM UTC (3 PM EST)
 
 companies:
   # Major Tech Companies - Using API endpoints where available
@@ -49,6 +54,7 @@ keywords:
     - "Full Stack"
     - "DevOps"
     - "Site Reliability"
+    - "Site Reliability Engineer"
     - "Platform Engineer"
     - "Data Engineer"
     - "Cloud Engineer"
@@ -56,6 +62,9 @@ keywords:
     - "Java"
     - "AI Engineer"
     - "Deep Learning"
+    - "university"
+    - "Graduate"
+    - "Master"
     # Add your keywords here...
 
   # Optional: exclude jobs containing these terms

@@ -228,13 +228,72 @@ def main():
     def job_check():
         run_job_check(scrapers, matcher, database, notifiers)
     
-    # Run
-    scheduler = JobScheduler(config.polling.interval_minutes)
+    # Define daily summary function
+    def send_daily_summary():
+        logger.info("Generating daily summary...")
+        stats = database.get_daily_stats()
+        
+        # Build summary message
+        lines = [
+            "📊 *Daily Job Alert Summary*",
+            "",
+            f"📈 *Jobs Added Today:* {stats['jobs_today']}",
+            f"🔔 *Notifications Sent:* {stats['notified_today']}",
+            f"📁 *Total Jobs in Database:* {stats['total_jobs']}",
+            "",
+            "*By Company:*"
+        ]
+        
+        for company, count in stats['by_company'].items():
+            lines.append(f"  • {company}: {count}")
+        
+        if not stats['by_company']:
+            lines.append("  No new jobs today")
+        
+        summary_text = "\n".join(lines)
+        
+        # Send via all notifiers
+        for notifier in notifiers:
+            try:
+                # Create a fake Job object for compatibility
+                from .database import Job
+                summary_job = Job(
+                    company="Summary",
+                    title="Daily Summary",
+                    url="",
+                    description=summary_text
+                )
+                # Use raw text for Telegram
+                if hasattr(notifier, 'config') and hasattr(notifier.config, 'chat_id'):
+                    import requests
+                    payload = {
+                        'chat_id': notifier.config.chat_id,
+                        'text': summary_text.replace('*', '').replace('\\', ''),
+                        'parse_mode': None
+                    }
+                    requests.post(
+                        f"https://api.telegram.org/bot{notifier.config.bot_token}/sendMessage",
+                        json=payload,
+                        timeout=10
+                    )
+                    logger.info("Daily summary sent via Telegram")
+            except Exception as e:
+                logger.error(f"Failed to send daily summary via {notifier.name}: {e}")
+    
+    # Configure scheduler
+    daily_hour = None
+    if config.daily_summary.enabled:
+        daily_hour = config.daily_summary.hour
+    
+    scheduler = JobScheduler(
+        interval_minutes=config.polling.interval_minutes,
+        daily_summary_hour=daily_hour
+    )
     
     if args.once:
         scheduler.run_once(job_check)
     else:
-        scheduler.start(job_check)
+        scheduler.start(job_check, send_daily_summary)
     
     # Cleanup
     database.close()

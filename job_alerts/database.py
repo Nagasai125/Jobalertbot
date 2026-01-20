@@ -172,6 +172,43 @@ class JobDatabase:
         cursor.execute('SELECT COUNT(*) FROM jobs')
         return cursor.fetchone()[0]
     
+    def get_daily_stats(self) -> dict:
+        """Get statistics for today's job scraping."""
+        cursor = self.conn.cursor()
+        
+        # Get jobs added today
+        cursor.execute('''
+            SELECT COUNT(*) FROM jobs 
+            WHERE date(first_seen) = date('now')
+        ''')
+        jobs_today = cursor.fetchone()[0]
+        
+        # Get jobs by company added today
+        cursor.execute('''
+            SELECT company, COUNT(*) as count FROM jobs 
+            WHERE date(first_seen) = date('now')
+            GROUP BY company
+            ORDER BY count DESC
+        ''')
+        by_company = {row['company']: row['count'] for row in cursor.fetchall()}
+        
+        # Get total jobs in database
+        total_jobs = self.get_job_count()
+        
+        # Get notified jobs today
+        cursor.execute('''
+            SELECT COUNT(*) FROM jobs 
+            WHERE date(first_seen) = date('now') AND notified = 1
+        ''')
+        notified_today = cursor.fetchone()[0]
+        
+        return {
+            'jobs_today': jobs_today,
+            'by_company': by_company,
+            'total_jobs': total_jobs,
+            'notified_today': notified_today
+        }
+    
     def close(self):
         """Close the database connection."""
         if self.conn:

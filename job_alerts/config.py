@@ -81,6 +81,13 @@ class PollingConfig:
 
 
 @dataclass
+class DailySummaryConfig:
+    """Daily summary configuration."""
+    enabled: bool = False
+    hour: int = 20  # 8 PM UTC
+
+
+@dataclass
 class FiltersConfig:
     """Filter configuration."""
     experience: List[str] = field(default_factory=list)
@@ -90,6 +97,7 @@ class FiltersConfig:
 class Config:
     """Main configuration object."""
     polling: PollingConfig = field(default_factory=PollingConfig)
+    daily_summary: DailySummaryConfig = field(default_factory=DailySummaryConfig)
     companies: List[CompanyConfig] = field(default_factory=list)
     keywords: KeywordsConfig = field(default_factory=KeywordsConfig)
     filters: FiltersConfig = field(default_factory=FiltersConfig)
@@ -152,6 +160,14 @@ def load_config(config_path: str = "config/config.yaml") -> Config:
     if 'polling' in raw_config:
         config.polling = PollingConfig(
             interval_minutes=raw_config['polling'].get('interval_minutes', 10)
+        )
+    
+    # Daily Summary
+    if 'daily_summary' in raw_config:
+        ds = raw_config['daily_summary']
+        config.daily_summary = DailySummaryConfig(
+            enabled=ds.get('enabled', False),
+            hour=ds.get('hour', 20)
         )
     
     # Companies
