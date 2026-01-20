@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  job-alerts:
+    build: .
+    container_name: job-alerts
+    restart: unless-stopped
+    environment:
+      # Telegram settings
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      # Email settings
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_RECIPIENT=${EMAIL_RECIPIENT}
+    volumes:
+      # Mount config for easy editing
+      - ./config:/app/config:ro
+      # Persist database and logs
+      - ./data:/app/data
+      - ./logs:/app/logs

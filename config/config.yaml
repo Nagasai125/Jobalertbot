@@ -1,0 +1,94 @@
+# Job Alerts Configuration
+
+polling:
+  interval_minutes: 10
+
+companies:
+  # Major Tech Companies - Using API endpoints where available
+  - name: "Amazon"
+    url: "https://www.amazon.jobs/en/search.json?base_query=&loc_query=United+States&latitude=&longitude=&loc_group_id=&invalid_location=false&country=USA&city=&region=&county=&limit=100"
+    scraper: "amazon"
+  
+  
+  - name: "Microsoft"
+    url: "https://careers.microsoft.com/us/en/search-results"
+    scraper: "generic"
+  
+  - name: "Adobe"
+    url: "https://careers.adobe.com/us/en/search-results?keywords=united%20states"
+    scraper: "generic"
+  
+  - name: "Google"
+    url: "https://www.google.com/about/careers/applications/jobs/results"
+    scraper: "google"
+  
+  - name: "Uber"
+    url: "https://www.uber.com/us/en/careers/list/"
+    scraper: "uber"
+  
+  - name: "LiveRamp"
+    url: "https://liveramp.wd5.myworkdayjobs.com/LiveRampCareers"
+    scraper: "workday"
+  
+  - name: "Stripe"
+    url: "https://stripe.com/jobs/search"
+    scraper: "stripe"
+  
+  - name: "Meta"
+    url: "https://www.metacareers.com/jobs"
+    scraper: "generic"
+
+keywords:
+  # Job titles/roles to match (case-insensitive, tokenized matching)
+  include:
+    - "Software Engineer"
+    - "Data Scientist"
+    - "Machine Learning"
+    - "Backend Engineer"
+    - "Frontend Engineer"
+    - "Full Stack"
+    - "DevOps"
+    - "Site Reliability"
+    - "Platform Engineer"
+    - "Data Engineer"
+    - "Cloud Engineer"
+    - "Python"
+    - "Java"
+    - "AI Engineer"
+    - "Deep Learning"
+    # Add your keywords here...
+
+  # Optional: exclude jobs containing these terms
+  exclude: []
+
+  # Location filter - only match jobs in these locations
+  locations:
+    - "United States"
+    - "USA"
+    - "US"
+    - "Remote"
+
+matching:
+  mode: "tokenized"  # exact | tokenized | fuzzy
+  fuzzy_threshold: 0.85
+  case_sensitive: false
+
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+  email:
+    enabled: true
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    sender_email: "${EMAIL_SENDER}"
+    sender_password: "${EMAIL_PASSWORD}"
+    recipient_email: "${EMAIL_RECIPIENT}"
+
+database:
+  path: "data/jobs.db"
+
+logging:
+  level: "INFO"
+  file: "logs/job_alerts.log"
