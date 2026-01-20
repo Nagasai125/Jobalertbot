@@ -104,12 +104,22 @@ class TelegramNotifier(BaseNotifier):
         if job_type:
             parts.append(f"💼 {job_type}")
         
+        # Escape URL for MarkdownV2 (only ) and \ need escaping inside URLs)
+        safe_url = self._escape_url(job.url)
+        
         parts.extend([
             "",
-            f"🔗 [Apply Here]({job.url})"
+            f"🔗 [Apply Here]({safe_url})"
         ])
         
         return "\n".join(parts)
+    
+    def _escape_url(self, url: str) -> str:
+        """Escape special characters in URL for MarkdownV2 link syntax."""
+        if not url:
+            return ""
+        # In MarkdownV2 URLs, only ) and \ need escaping
+        return url.replace('\\', '\\\\').replace(')', '\\)')
     
     def _escape_markdown(self, text: str) -> str:
         """Escape special characters for Telegram MarkdownV2."""
