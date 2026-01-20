@@ -68,6 +68,14 @@ keywords:
     - "US"
     - "Remote"
 
+filters:
+  # Experience level to match: intern, entry, mid, senior
+  # If empty, all levels are included.
+  experience:
+    - "entry"
+    - "mid"
+
+
 matching:
   mode: "tokenized"  # exact | tokenized | fuzzy
   fuzzy_threshold: 0.85

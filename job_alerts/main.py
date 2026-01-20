@@ -188,7 +188,7 @@ def main():
     
     # Create components
     scrapers = create_scrapers(config)
-    matcher = KeywordMatcher(config.keywords, config.matching)
+    matcher = KeywordMatcher(config.keywords, config.matching, config.filters)
     database = JobDatabase(config.database.path)
     notifiers = create_notifiers(config)
     

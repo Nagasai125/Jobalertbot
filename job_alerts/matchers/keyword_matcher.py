@@ -10,7 +10,7 @@ import re
 from rapidfuzz import fuzz
 
 from ..database import Job
-from ..config import KeywordsConfig, MatchingConfig
+from ..config import KeywordsConfig, MatchingConfig, FiltersConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +25,32 @@ class KeywordMatcher:
     - fuzzy: Similarity-based matching with configurable threshold
     """
     
-    def __init__(self, keywords: KeywordsConfig, matching: MatchingConfig):
+    def __init__(self, keywords: KeywordsConfig, matching: MatchingConfig, filters: FiltersConfig = None):
         """
         Initialize the keyword matcher.
         
         Args:
             keywords: Keyword configuration (include, exclude, locations).
             matching: Matching algorithm configuration.
+            filters: Filter configuration (experience).
         """
         self.keywords = keywords
         self.matching = matching
+        self.filters = filters
         
         # Pre-process keywords for faster matching
         self._include_keywords = self._normalize_keywords(keywords.include)
         self._exclude_keywords = self._normalize_keywords(keywords.exclude)
         self._location_keywords = self._normalize_keywords(keywords.locations)
-    
+        
+        # Experience level keywords map
+        self.EXPERIENCE_LEVELS = {
+            'intern': ['intern', 'internship', 'co-op', 'student', 'university'],
+            'entry': ['entry', 'junior', 'associate', 'grad', 'new grad', '0-1', '0-2'],
+            'mid': ['mid', 'intermediate', 'staff', 'ii', 'iii'],
+            'senior': ['senior', 'sr', 'lead', 'principal', 'head', 'iv', 'v', 'manager', 'director']
+        }
+        
     def _normalize_keywords(self, keywords: List[str]) -> Set[str]:
         """Normalize keywords for matching."""
         if self.matching.case_sensitive:
@@ -113,7 +123,40 @@ class KeywordMatcher:
                 return True
         
         return False
-    
+
+    def _check_experience(self, job: Job) -> bool:
+        """
+        Check if job matches experience level filter.
+        If no experience filter is set, allow all.
+        If job text matches any allowed level keyword, allow it.
+        If job text matches any DISALLOWED level keyword, block it.
+        Default to allowing if ambiguous.
+        """
+        if not self.filters or not self.filters.experience:
+            return True
+            
+        allowed_levels = set(l.lower() for l in self.filters.experience)
+        if not allowed_levels:
+            return True
+
+        title_lower = job.title.lower()
+        
+        # Check against each defined level
+        detected_levels = set()
+        for level, keywords in self.EXPERIENCE_LEVELS.items():
+            if any(k in title_lower for k in keywords):
+                detected_levels.add(level)
+        
+        # If no specific level detected, assume it fits (or check description - optional)
+        if not detected_levels:
+            # Logic: If looking for 'entry', avoiding 'senior' is key.
+            # If no level words found, it's likely a generic title like "Software Engineer" which fits all.
+            return True
+            
+        # If we detected levels, check if ANY of them are allowed
+        # e.g. "Senior Software Engineer" -> detected 'senior' -> if allowed_levels has 'senior', return True
+        return any(pk in allowed_levels for pk in detected_levels)
+
     def matches(self, job: Job) -> bool:
         """
         Check if a job matches the configured keywords.
@@ -140,6 +183,11 @@ class KeywordMatcher:
             if not self._matches_any(job.location, self._location_keywords):
                 logger.debug(f"Job excluded by location: {job.title} ({job.location})")
                 return False
+
+        # Check experience filter
+        if not self._check_experience(job):
+            logger.debug(f"Job excluded by experience level: {job.title}")
+            return False
         
         # Check include keywords against title and description
         text_to_check = f"{job.title} {job.description}"

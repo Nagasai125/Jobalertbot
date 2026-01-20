@@ -81,11 +81,18 @@ class PollingConfig:
 
 
 @dataclass
+class FiltersConfig:
+    """Filter configuration."""
+    experience: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Config:
     """Main configuration object."""
     polling: PollingConfig = field(default_factory=PollingConfig)
     companies: List[CompanyConfig] = field(default_factory=list)
     keywords: KeywordsConfig = field(default_factory=KeywordsConfig)
+    filters: FiltersConfig = field(default_factory=FiltersConfig)
     matching: MatchingConfig = field(default_factory=MatchingConfig)
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
@@ -165,6 +172,13 @@ def load_config(config_path: str = "config/config.yaml") -> Config:
             include=kw.get('include', []),
             exclude=kw.get('exclude', []),
             locations=kw.get('locations', [])
+        )
+
+    # Filters
+    if 'filters' in raw_config:
+        fl = raw_config['filters']
+        config.filters = FiltersConfig(
+            experience=fl.get('experience', [])
         )
     
     # Matching
