@@ -1,15 +1,12 @@
 """
 Telegram notification channel.
 Sends job alerts via Telegram bot.
+Implementation updated to use synchronous requests to avoid event loops issues.
 """
 
 import logging
-import asyncio
-from typing import Optional
-
-from telegram import Bot
-from telegram.constants import ParseMode
-from telegram.error import TelegramError
+import requests
+from time import sleep
 
 from .base import BaseNotifier
 from ..database import Job
@@ -29,10 +26,10 @@ class TelegramNotifier(BaseNotifier):
             config: Telegram configuration with bot_token and chat_id.
         """
         self.config = config
-        self.bot: Optional[Bot] = None
+        self.base_url = f"https://api.telegram.org/bot{config.bot_token}/sendMessage"
         
-        if config.enabled and config.bot_token:
-            self.bot = Bot(token=config.bot_token)
+        if not config.bot_token:
+            logger.warning("Telegram bot token missing")
     
     @property
     def name(self) -> str:
@@ -48,8 +45,7 @@ class TelegramNotifier(BaseNotifier):
         Returns:
             True if sent successfully, False otherwise.
         """
-        if not self.config.enabled or not self.bot:
-            logger.debug("Telegram notifications disabled")
+        if not self.config.enabled:
             return False
         
         if not self.config.chat_id:
@@ -58,38 +54,38 @@ class TelegramNotifier(BaseNotifier):
         
         message = self._format_telegram_message(job)
         
+        payload = {
+            'chat_id': self.config.chat_id,
+            'text': message,
+            'parse_mode': 'MarkdownV2',
+            'disable_web_page_preview': False
+        }
+        
         try:
-            # Run async send in sync context
-            asyncio.run(self._send_message(message))
+            response = requests.post(self.base_url, json=payload, timeout=10)
+            
+            if response.status_code == 429:
+                # Rate limited
+                retry_after = response.json().get('parameters', {}).get('retry_after', 5)
+                logger.warning(f"Telegram rate limit, waiting {retry_after}s")
+                sleep(retry_after)
+                return self.send(job)  # Retry once
+                
+            response.raise_for_status()
             logger.info(f"Telegram notification sent for: {job.title}")
             return True
-        except TelegramError as e:
-            logger.error(f"Telegram error: {e}")
+            
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Telegram HTTP error: {e.response.text if e.response else e}")
             return False
         except Exception as e:
             logger.error(f"Failed to send Telegram notification: {e}")
             return False
     
-    async def _send_message(self, message: str):
-        """Send message asynchronously."""
-        await self.bot.send_message(
-            chat_id=self.config.chat_id,
-            text=message,
-            parse_mode=ParseMode.MARKDOWN,
-            disable_web_page_preview=False
-        )
-    
     def _format_telegram_message(self, job: Job) -> str:
         """
-        Format job as Telegram message with Markdown.
-        
-        Args:
-            job: The Job to format.
-            
-        Returns:
-            Formatted Telegram message.
+        Format job as Telegram message with MarkdownV2.
         """
-        # Escape special Markdown characters in dynamic content
         title = self._escape_markdown(job.title)
         company = self._escape_markdown(job.company)
         location = self._escape_markdown(job.location) if job.location else ""
