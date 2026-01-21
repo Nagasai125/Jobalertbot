@@ -23,6 +23,10 @@ COPY config/ ./config/
 # Create directories for data and logs
 RUN mkdir -p data logs
 
+# HuggingFace Spaces runs as user with uid 1000
+RUN chown -R 1000:1000 /app
+USER 1000
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
