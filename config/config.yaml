@@ -14,7 +14,9 @@ companies:
     url: "https://www.amazon.jobs/en/search.json?base_query=&loc_query=United+States&latitude=&longitude=&loc_group_id=&invalid_location=false&country=USA&city=&region=&county=&limit=100"
     scraper: "amazon"
   
-  
+  - name: "Apple"
+    url: "https://jobs.apple.com"
+    scraper: "apple"
   - name: "Microsoft"
     url: "https://careers.microsoft.com/us/en/search-results"
     scraper: "generic"
